@@ -2,12 +2,16 @@
 import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useMarketplaceStore } from "../stores/marketplace";
+import { useAppStore } from "../stores/app";
 import StatusPill from "../components/shared/StatusPill.vue";
 import Icon from "../components/shared/Icon.vue";
 
 const props = defineProps({ id: { type: String, required: true } });
 const router = useRouter();
 const market = useMarketplaceStore();
+const app = useAppStore();
+const isJordan = computed(() => app.currentPersona === "jordan");
+const currentAuthorName = computed(() => (isJordan.value ? market.profile.name : "Megan Smith"));
 
 const opp = computed(() => market.opportunityById(props.id));
 const demandSourceLabel = computed(() => {
@@ -44,7 +48,7 @@ const claimError = ref("");
 
 function postMessage() {
   if (!message.value.trim()) return;
-  market.addQaMessage(opp.value.id, market.profile.name, message.value.trim());
+  market.addQaMessage(opp.value.id, currentAuthorName.value, message.value.trim());
   message.value = "";
 }
 
@@ -59,6 +63,10 @@ function claim() {
 
 function toggleTraining(index) {
   market.toggleTraining(opp.value.id, index);
+}
+
+function reassign() {
+  market.reassign(opp.value.id);
 }
 
 function goBack() {
@@ -85,7 +93,7 @@ function goBack() {
           <div class="effort-row">
             <Icon name="clock" :size="14" />
             <span class="effort-value">{{ opp.estimatedHours }} hrs effort</span>
-            <span v-if="opp.status === 'published'" class="capacity-note" :class="{ warn: overCapacity }">
+            <span v-if="isJordan && opp.status === 'published'" class="capacity-note" :class="{ warn: overCapacity }">
               · {{ market.remainingCapacity }} hrs of bench capacity left
             </span>
           </div>
@@ -153,7 +161,7 @@ function goBack() {
             <strong>Stalled:</strong> {{ opp.abandonedReason }}
           </div>
 
-          <div class="actions-row">
+          <div v-if="isJordan" class="actions-row">
             <button v-if="canClaim" class="btn btn-primary" @click="claim">
               <Icon name="checkCircle" :size="16" /> Claim this opportunity
             </button>
@@ -161,6 +169,11 @@ function goBack() {
               Complete required training above to unlock claiming.
             </div>
             <span v-if="claimError" class="error-text">{{ claimError }}</span>
+          </div>
+          <div v-else-if="opp.status === 'abandoned'" class="actions-row">
+            <button class="btn btn-secondary" @click="reassign">
+              <Icon name="checkCircle" :size="16" /> Reopen for claim
+            </button>
           </div>
         </div>
       </div>
@@ -184,9 +197,11 @@ function goBack() {
         <div class="card qa-card">
           <div class="qa-header">
             <Icon name="chat" :size="16" />
-            <h3>Ask {{ opp.requester.split(" ")[0] }} a question</h3>
+            <h3 v-if="isJordan">Ask {{ opp.requester.split(" ")[0] }} a question</h3>
+            <h3 v-else>Conversation</h3>
           </div>
-          <p class="qa-hint">Clarify scope, timeline, or tools before you claim — this thread stays with the opportunity.</p>
+          <p v-if="isJordan" class="qa-hint">Clarify scope, timeline, or tools before you claim — this thread stays with the opportunity.</p>
+          <p v-else class="qa-hint">Reply to questions from the consultant working this opportunity.</p>
           <div class="qa-thread scroll-hidden">
             <div v-if="opp.qaThread.length === 0" class="empty-note">No messages yet. Say hello.</div>
             <div v-for="m in opp.qaThread" :key="m.id" class="qa-message">

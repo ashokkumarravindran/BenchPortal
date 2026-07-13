@@ -1,13 +1,21 @@
 import { createRouter, createWebHistory } from "vue-router";
+import { useAppStore } from "../stores/app";
 
-// This POC is scoped to Jordan's experience. Megan's dashboard views remain
-// in src/views/megan for a separate future POC and are intentionally left
-// out of navigation for now.
 const routes = [
-  { path: "/", redirect: "/jordan" },
+  {
+    path: "/",
+    redirect: () => {
+      const app = useAppStore();
+      return app.currentPersona === "megan" ? "/megan" : "/jordan";
+    },
+  },
   {
     path: "/jordan",
     component: () => import("../views/jordan/JordanDashboard.vue"),
+  },
+  {
+    path: "/megan",
+    component: () => import("../views/megan/MeganDashboard.vue"),
   },
   {
     path: "/opportunity/:id",

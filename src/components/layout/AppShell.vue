@@ -1,15 +1,39 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useMarketplaceStore } from "../../stores/marketplace";
+import { useAppStore } from "../../stores/app";
 import Icon from "../shared/Icon.vue";
+import SwitchUserModal from "../shared/SwitchUserModal.vue";
 
 const market = useMarketplaceStore();
+const app = useAppStore();
+
+const isJordan = computed(() => app.currentPersona === "jordan");
 const unreadCount = computed(() => market.notifications.filter((n) => !n.read).length);
 const showNotifications = ref(false);
+const showProfileMenu = ref(false);
+const showSwitchModal = ref(false);
+
+const identity = computed(() =>
+  isJordan.value
+    ? { name: "Jordan Rivera", role: "Consultant", initials: "JR" }
+    : { name: "Megan Smith", role: "Bench Manager", initials: "MS" }
+);
 
 function toggleNotifications() {
   showNotifications.value = !showNotifications.value;
+  showProfileMenu.value = false;
   if (showNotifications.value) market.markNotificationsRead();
+}
+
+function toggleProfileMenu() {
+  showProfileMenu.value = !showProfileMenu.value;
+  showNotifications.value = false;
+}
+
+function openSwitchModal() {
+  showSwitchModal.value = true;
+  showProfileMenu.value = false;
 }
 </script>
 
@@ -22,7 +46,7 @@ function toggleNotifications() {
           <span class="app-name">Bench Marketplace</span>
         </div>
         <div class="topbar-right">
-          <div class="notif-wrap">
+          <div v-if="isJordan" class="notif-wrap">
             <button class="notif-bell" aria-label="Notifications" @click="toggleNotifications">
               <Icon name="bell" :size="18" />
               <span v-if="unreadCount" class="notif-badge">{{ unreadCount }}</span>
@@ -34,16 +58,33 @@ function toggleNotifications() {
               </div>
             </div>
           </div>
-          <router-link to="/jordan" class="avatar-link">
-            <div class="avatar-sm">{{ market.profile.name.split(" ").map(p => p[0]).join("") }}</div>
-          </router-link>
+
+          <div class="profile-wrap">
+            <button class="avatar-link" @click="toggleProfileMenu">
+              <div class="avatar-sm">{{ identity.initials }}</div>
+            </button>
+            <div v-if="showProfileMenu" class="profile-dropdown card">
+              <div class="profile-dropdown-header">
+                <div class="avatar-sm">{{ identity.initials }}</div>
+                <div>
+                  <div class="profile-dropdown-name">{{ identity.name }}</div>
+                  <div class="profile-dropdown-role">{{ identity.role }}</div>
+                </div>
+              </div>
+              <button class="profile-dropdown-item" @click="openSwitchModal">
+                <Icon name="user" :size="14" /> Switch user
+              </button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="brand-stripe" />
     </header>
-    <main class="content">
+    <main class="content" :class="{ 'content-wide': !isJordan }">
       <router-view />
     </main>
+
+    <SwitchUserModal :open="showSwitchModal" @close="showSwitchModal = false" />
   </div>
 </template>
 
@@ -89,7 +130,8 @@ function toggleNotifications() {
   align-items: center;
   gap: 16px;
 }
-.notif-wrap {
+.notif-wrap,
+.profile-wrap {
   position: relative;
 }
 .notif-bell {
@@ -147,6 +189,10 @@ function toggleNotifications() {
 }
 .avatar-link {
   display: flex;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
 }
 .avatar-sm {
   width: 32px;
@@ -159,6 +205,52 @@ function toggleNotifications() {
   justify-content: center;
   font-weight: 700;
   font-size: 12px;
+  flex-shrink: 0;
+}
+.profile-dropdown {
+  position: absolute;
+  right: 0;
+  top: 42px;
+  width: 240px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 30;
+}
+.profile-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px 10px;
+  border-bottom: 1px solid var(--sl-border);
+  margin-bottom: 4px;
+}
+.profile-dropdown-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--sl-navy);
+}
+.profile-dropdown-role {
+  font-size: 11px;
+  color: var(--sl-ink-secondary);
+}
+.profile-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  padding: 8px 6px;
+  border-radius: var(--sl-radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sl-navy);
+  cursor: pointer;
+  text-align: left;
+}
+.profile-dropdown-item:hover {
+  background: var(--sl-surface-muted);
 }
 .content {
   flex: 1;
@@ -166,5 +258,8 @@ function toggleNotifications() {
   margin: 0 auto;
   width: 100%;
   padding: 32px 24px 64px;
+}
+.content-wide {
+  max-width: 1360px;
 }
 </style>

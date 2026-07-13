@@ -223,6 +223,42 @@ export const useMarketplaceStore = defineStore("marketplace", {
       opp.requiredTraining[trainingIndex].completed = !opp.requiredTraining[trainingIndex].completed;
     },
 
+    // Megan submitting directly (FR-10) skips her own review queue — AI
+    // vetting/exceptions only apply to intake from Slack/Teams/email.
+    submitOpportunity({ title, description, demandSource, estimatedHours, successCriteria, skillsRequired, tools }) {
+      const opp = {
+        id: nextId("opp"),
+        title,
+        description,
+        requester: "Megan Smith",
+        requesterTitle: "Capability Lead, Data & AI",
+        requesterResponseHint: "Usually replies within a few hours",
+        demandSource,
+        skillsRequired: skillsRequired || [],
+        estimatedHours,
+        businessValueScore: 70,
+        status: "published",
+        successCriteria: successCriteria || "To be refined with claiming consultant.",
+        tools: tools || [],
+        createdAt: new Date().toISOString(),
+        claimedBy: null,
+        claimedAt: null,
+        hoursLogged: 0,
+        requiredTraining: [],
+        qaThread: [],
+      };
+      this.opportunities.unshift(opp);
+      this.activity.unshift({
+        id: nextId("act"),
+        type: "published",
+        opportunityId: opp.id,
+        opportunityTitle: opp.title,
+        text: "Megan Smith submitted and published this opportunity directly.",
+        at: opp.createdAt,
+      });
+      return opp;
+    },
+
     approveException(exceptionId, note) {
       const exc = this.exceptions.find((e) => e.id === exceptionId);
       if (!exc) return;

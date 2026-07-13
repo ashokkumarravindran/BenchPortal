@@ -16,6 +16,16 @@ function daysAgo(dateStr) {
   return Math.max(0, Math.round(ms / (1000 * 60 * 60 * 24)));
 }
 
+// Assumed pace for auto-tracking progress on an active claim: consultants split
+// bench time across active items, so hours accrue gradually rather than being
+// self-reported. No manual input — hours logged is derived from claimedAt.
+const ASSUMED_HOURS_PER_DAY = 4;
+
+function computeAutoHours(opportunity) {
+  if (!opportunity.claimedAt) return 0;
+  return Math.min(opportunity.estimatedHours, daysAgo(opportunity.claimedAt) * ASSUMED_HOURS_PER_DAY);
+}
+
 // Simple skill-overlap match score used for the "pushed matches" feed (FR-2 / TR-19).
 function matchScore(opportunity, profile) {
   const known = new Set(profile.skills.map((s) => s.name));
@@ -46,6 +56,7 @@ export const useMarketplaceStore = defineStore("marketplace", {
     learningCatalog,
     demandSources,
     capacityHours: BENCH_CAPACITY_HOURS,
+    onboardingPromptDismissed: false,
     notifications: [
       { id: "n-1", text: "You were matched to a new opportunity: “Bench dashboard UX pass”.", read: false, at: "2026-07-12T09:00:00" },
       { id: "n-2", text: "Megan Smith replied on “Prompt library for delivery teams”.", read: false, at: "2026-07-09T16:02:00" },
@@ -163,10 +174,10 @@ export const useMarketplaceStore = defineStore("marketplace", {
       });
     },
 
-    logHours(opportunityId, hoursLogged, text) {
+    postStatusUpdate(opportunityId, text) {
       const opp = this.opportunities.find((o) => o.id === opportunityId);
       if (!opp) return;
-      opp.hoursLogged = Math.max(0, Math.min(opp.estimatedHours, hoursLogged));
+      opp.hoursLogged = computeAutoHours(opp);
       const update = {
         id: nextId("su"),
         opportunityId,
@@ -304,6 +315,10 @@ export const useMarketplaceStore = defineStore("marketplace", {
     markNotificationsRead() {
       this.notifications.forEach((n) => (n.read = true));
     },
+
+    dismissOnboardingPrompt() {
+      this.onboardingPromptDismissed = true;
+    },
   },
 });
 
@@ -321,4 +336,4 @@ function bucketAging(opportunities) {
   return buckets;
 }
 
-export { daysAgo };
+export { daysAgo, computeAutoHours };

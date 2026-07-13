@@ -11,8 +11,15 @@ const market = useMarketplaceStore();
 
 const profileModalOpen = ref(false);
 onMounted(() => {
-  if (!market.profile.onboardingComplete) profileModalOpen.value = true;
+  if (!market.profile.onboardingComplete && !market.onboardingPromptDismissed) {
+    profileModalOpen.value = true;
+  }
 });
+
+function closeProfileModal() {
+  profileModalOpen.value = false;
+  market.dismissOnboardingPrompt();
+}
 
 const tabs = [
   { id: "matched", label: "Matched for you", icon: "sparkle" },
@@ -91,17 +98,11 @@ const extraSkillCount = computed(() => Math.max(0, market.profile.skills.length 
         </div>
 
         <div v-else class="tab-panel">
-          <div class="card capacity-card">
-            <CapacityBar />
-          </div>
-
           <div v-if="market.myActiveWork.length === 0" class="card empty-state">
             <p>Nothing in progress right now.</p>
             <button class="btn btn-primary btn-sm" @click="activeTab = 'matched'">Find something to work on</button>
           </div>
-          <div v-for="opp in market.myActiveWork" :key="opp.id" class="work-item-wrap">
-            <MyWorkItem :opportunity="opp" />
-          </div>
+          <MyWorkItem v-for="opp in market.myActiveWork" :key="opp.id" :opportunity="opp" />
 
           <div v-if="market.myCompletedWork.length" class="completed-section">
             <div class="section-label">Completed</div>
@@ -160,7 +161,7 @@ const extraSkillCount = computed(() => Math.max(0, market.profile.skills.length 
       </div>
     </div>
 
-    <ProfileModal :open="profileModalOpen" @close="profileModalOpen = false" />
+    <ProfileModal :open="profileModalOpen" @close="closeProfileModal" />
   </div>
 </template>
 
@@ -271,12 +272,6 @@ const extraSkillCount = computed(() => Math.max(0, market.profile.skills.length 
   align-items: center;
 }
 
-.capacity-card {
-  padding: 16px 20px;
-}
-.work-item-wrap {
-  display: flex;
-}
 .completed-section {
   display: flex;
   flex-direction: column;

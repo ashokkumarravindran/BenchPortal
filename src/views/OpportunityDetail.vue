@@ -34,9 +34,10 @@ const trainingComplete = computed(() => trainingList.value.every((t) => t.comple
 
 const overCapacity = computed(() => opp.value && opp.value.estimatedHours > market.remainingCapacity);
 
-const canClaim = computed(
-  () => opp.value?.status === "published" && trainingComplete.value && !overCapacity.value
-);
+// Capacity is enforced when claiming (see store.claimOpportunity), surfaced as
+// claimError below — the button itself only gates on training so checking the
+// last box always reveals it rather than needing capacity to line up too.
+const canClaim = computed(() => opp.value?.status === "published" && trainingComplete.value);
 
 const message = ref("");
 const claimError = ref("");
@@ -158,9 +159,6 @@ function goBack() {
             </button>
             <div v-else-if="opp.status === 'published' && !trainingComplete" class="hint-block">
               Complete required training above to unlock claiming.
-            </div>
-            <div v-else-if="opp.status === 'published' && overCapacity" class="hint-block">
-              This would put you over your 40 hr bench capacity ({{ market.remainingCapacity }} hrs left).
             </div>
             <span v-if="claimError" class="error-text">{{ claimError }}</span>
           </div>
